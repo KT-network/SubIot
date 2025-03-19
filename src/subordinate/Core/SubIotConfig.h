@@ -6,7 +6,7 @@
 #define ESP32_TEST_SUBIOTCONFIG_H
 
 
-#define SUB_IOT_FACTORY_BLE_NAME "ESP32_Factory_1"
+//#define SUB_IOT_FACTORY_BLE_NAME "ESP32_Factory_1"
 
 
 

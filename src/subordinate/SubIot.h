@@ -8,8 +8,11 @@
 #include "Arduino.h"
 #include "LittleFS.h"
 
+#include "Core/SubIotBle.h"
 #include "Core/SubIotConfig.h"
 
+
+SubIotBle subIotBle;
 
 class SubIot{
 private:
@@ -25,7 +28,10 @@ public:
     void run();
 
     bool getDebug();
+    WorkState getWorkState();
 
 };
+
+SubIot subIot;
 
 #endif //ESP32_TEST_SUBIOT_H
