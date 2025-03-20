@@ -6,7 +6,7 @@
 #define ESP32_TEST_SUBIOT_H
 
 #include "Arduino.h"
-#include "LittleFS.h"
+#include "Preferences.h"
 
 #include "Core/SubIotBle.h"
 #include "Core/SubIotConfig.h"
@@ -18,17 +18,17 @@ class SubIot{
 private:
     WorkState workState = WORK_STATE_INIT;
     String subIotSystemSerialNum = "";
-    uint8_t subIotSystemDebugMode = 1;
-
+    bool subIotSystemDebugMode = true;
+    Preferences pNvs;
 
     bool isFactory();
 
 public:
     void begin();
     void run();
-
     bool getDebug();
     WorkState getWorkState();
+    Preferences getPreferencesObject();
 
 };
 
