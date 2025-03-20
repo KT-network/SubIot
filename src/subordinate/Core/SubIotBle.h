@@ -23,13 +23,12 @@ class SubIotBle {
 
 private:
     String bleNameString = "";
-    bool wait = false;
+    bool taskWait = false;
 
 public:
     void begin(WorkState state);
-    void setWaitState(bool state);
-    bool getWaitState();
-
+    bool getTaskWaitState();
+    void setTaskWaitState(bool state);
 
 };
 

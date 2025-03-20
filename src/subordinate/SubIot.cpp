@@ -4,107 +4,60 @@
 
 #include "SubIot.h"
 
-#include <RMakerDevice.h>
-
-SubIotBle pSubIotBle;
-SubIot subIot;
 
 void SubIotBleCharacteristicCallback::onRead(BLECharacteristic *pCharacteristic) {
     if (subIot.getWorkState() != WORK_STATE_BLE_CONFIG)
         return;
     if (pCharacteristic->getUUID().toString() == SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_CONFIG_SSID_UUID) {
-
-        LittleFS.begin();
-        File ssid = LittleFS.open("/config/wifi_ssid.conf", "w");
-        if (ssid) {
-            pCharacteristic->setValue(ssid.readString().c_str());
-            ssid.close();
-        }
-        LittleFS.end();
+        subIot.getPreferencesObject().begin("config", false);
+        pCharacteristic->setValue(subIot.getPreferencesObject().getString("wifi_ssid","").c_str());
+        subIot.getPreferencesObject().end();
     } else if (pCharacteristic->getUUID().toString() == SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_CONFIG_SSID_PWD_UUID) {
 
-        LittleFS.begin();
-        File ssid_pwd = LittleFS.open("/config/wifi_ssid_pwd.conf", "w");
-        if (ssid_pwd) {
-            pCharacteristic->setValue(ssid_pwd.readString().c_str());
-            ssid_pwd.close();
-        }
-        LittleFS.end();
+        subIot.getPreferencesObject().begin("config", false);
+        pCharacteristic->setValue(subIot.getPreferencesObject().getString("wifi_pwd","").c_str());
+        subIot.getPreferencesObject().end();
     } else if (pCharacteristic->getUUID().toString() == SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_FACTORY_SERIAL_NUM_UUID) {
 
-        LittleFS.begin();
-        File system_serial = LittleFS.open("/system/serial.conf", "w");
-        if (system_serial) {
-            pCharacteristic->setValue(system_serial.readString().c_str());
-            system_serial.close();
-        }
-        LittleFS.end();
+        subIot.getPreferencesObject().begin("system", false);
+        pCharacteristic->setValue(subIot.getPreferencesObject().getString("serial","").c_str());
+        subIot.getPreferencesObject().end();
+
     }
 
 
 }
 
 void SubIotBleCharacteristicCallback::onWrite(BLECharacteristic *pCharacteristic) {
-    Serial.println("[Ble] Write Data" + (String)pCharacteristic->getValue().c_str());
-    Serial.println();
-    Serial.println(pCharacteristic->getUUID().toString().c_str());
-    Serial.println();
 
     if (subIot.getWorkState() == WORK_STATE_FACTORY_CONFIG) {
-        if (pCharacteristic->getValue().empty()) {
-            Serial.println("[Ble] Write None");
+        if (pCharacteristic->getValue().empty())
             return;
 
+        if (pCharacteristic->getUUID().toString() == SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_FACTORY_SERIAL_NUM_UUID) {
+            subIot.getPreferencesObject().begin("system", true);
+            subIot.getPreferencesObject().putString("serial",pCharacteristic->getValue().c_str());
+            subIot.getPreferencesObject().end();
+        } else if (pCharacteristic->getUUID().toString() == SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_FACTORY_DEBUG_MODE_UUID) {
+            subIot.getPreferencesObject().begin("system", true);
+            subIot.getPreferencesObject().putUChar("debug",pCharacteristic->getData()[0]);
+            subIot.getPreferencesObject().end();
         }
 
-        if (pCharacteristic->getUUID().toString() == SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_FACTORY_SERIAL_NUM_UUID) {
-            Serial.println("[Ble] Factory Start Write");
-            LittleFS.begin();
-            File system_serial = LittleFS.open("/system/serial.conf", "w");
-            if (system_serial) {
-                system_serial.print(pCharacteristic->getValue().c_str());
-                system_serial.close();
-            }
-            LittleFS.end();
-            subIot.setWorkState(WORK_STATE_BLE_CONFIG);
-            pSubIotBle.setWaitState(false);
-            Serial.println("[Ble] System Factory Serial Config Done");
-
-        } else if (pCharacteristic->getUUID().toString() == SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_FACTORY_DEBUG_MODE_UUID) {
-
-            LittleFS.begin();
-            File system_debug = LittleFS.open("/system/debug.conf", "w");
-            if (system_debug) {
-                system_debug.write(pCharacteristic->getData(), 1);
-                system_debug.close();
-            }
-            LittleFS.end();
-        }else
-            Serial.println("mmmmmmmmmmm");
-
     } else {
-        Serial.println("[Ble] Wifi?");
         if (pCharacteristic->getValue().empty())
             return;
 
         if (pCharacteristic->getUUID().toString() == SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_CONFIG_SSID_UUID) {
 
-            LittleFS.begin();
-            File ssid = LittleFS.open("/config/wifi_ssid.conf", "w");
-            if (ssid) {
-                ssid.print(pCharacteristic->getValue().c_str());
-                ssid.close();
-            }
-            LittleFS.end();
+            subIot.getPreferencesObject().begin("config", true);
+            subIot.getPreferencesObject().putString("wifi_ssid",pCharacteristic->getValue().c_str());
+            subIot.getPreferencesObject().end();
 
         } else if (pCharacteristic->getUUID().toString() == SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_CONFIG_SSID_PWD_UUID) {
-            LittleFS.begin();
-            File ssid_pwd = LittleFS.open("/config/wifi_ssid_pwd.conf", "w");
-            if (ssid_pwd) {
-                ssid_pwd.print(pCharacteristic->getValue().c_str());
-                ssid_pwd.close();
-            }
-            LittleFS.end();
+            subIot.getPreferencesObject().begin("config", true);
+            subIot.getPreferencesObject().putString("wifi_pwd",pCharacteristic->getValue().c_str());
+            subIot.getPreferencesObject().end();
         }
 
     }
@@ -113,27 +66,12 @@ void SubIotBleCharacteristicCallback::onWrite(BLECharacteristic *pCharacteristic
 
 
 bool SubIot::isFactory() {
-    LittleFS.begin();
 
-    if (! LittleFS.exists("system/serial.conf")) {
-        LittleFS.end();
+    this->pNvs.begin("system", false);
+    this->subIotSystemSerialNum = this->pNvs.getString("serial","");
+    this->subIotSystemDebugMode = this->pNvs.getBool("debug", true);
 
-        return true;
-    }
-
-    File system_serial = LittleFS.open("/system/serial.conf", "r");
-    if (system_serial) {
-        this->subIotSystemSerialNum = system_serial.readString();
-        system_serial.close();
-    }
-
-    File system_debug = LittleFS.open("/system/debug.conf", "r");
-    if (system_debug) {
-        system_debug.read(&this->subIotSystemDebugMode, 1);
-        system_debug.close();
-    }
-
-    LittleFS.end();
+    this->pNvs.end();
 
     if (this->subIotSystemSerialNum == "") {
         return true;
@@ -142,26 +80,16 @@ bool SubIot::isFactory() {
 
 }
 
-void SubIot::setWaitState(bool state) {
-    this->wait = state;
-}
-
-bool SubIot::getWaitState() {
-    return this->wait;
-}
-
 WorkState SubIot::getWorkState() {
     return this->workState;
 }
 
-void SubIot::setWorkState(WorkState state) {
-    this->workState = state;
+bool SubIot::getDebug() {
+    return this->subIotSystemDebugMode;
 }
 
-bool SubIot::getDebug() {
-    if (this->subIotSystemDebugMode == 0)
-        return false;
-    return true;
+Preferences SubIot:: getPreferencesObject(){
+    return this->pNvs;
 }
 
 void SubIot::begin() {
@@ -171,11 +99,6 @@ void SubIot::begin() {
 
 
 void SubIot::run() {
-
-    if (pSubIotBle.getWaitState()) {
-        return;
-    }
-
 
     switch (this->workState) {
         case WORK_STATE_INIT:
@@ -189,7 +112,7 @@ void SubIot::run() {
 
             break;
         case WORK_STATE_FACTORY_CONFIG:
-            pSubIotBle.begin(this->workState);
+            subIotBle.begin(this->workState);
             break;
         case WORK_STATE_BLE_CONFIG:
             break;
