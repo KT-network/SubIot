@@ -30,9 +30,10 @@ public:
     bool getDebug();
     WorkState getWorkState();
     Preferences getPreferencesObject();
+    void setWorkState(WorkState state);
 
 };
 
-SubIot subIot;
+extern SubIot subIot;
 
 #endif //ESP32_TEST_SUBIOT_H

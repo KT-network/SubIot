@@ -34,6 +34,8 @@ void SubIotBle::begin(WorkState state) {
 
         pBleService->start();
         BLEDevice::startAdvertising();
+        Serial.println("[Ble] Start FACTORY Config");
+
         this->taskWait = true;
     } else if (state == WORK_STATE_BLE_CONFIG) {
         BLEDevice::init(this->bleNameString.c_str());
@@ -53,6 +55,8 @@ void SubIotBle::begin(WorkState state) {
 
         pBleService->start();
         BLEDevice::startAdvertising();
+        Serial.println("[Ble] Start Config Wifi");
+
         this->taskWait = true;
 
     } else {
@@ -63,8 +67,6 @@ void SubIotBle::begin(WorkState state) {
 
 
         delay(1000);
-        Serial.println("[Ble] Start Config Wifi");
-    } else {
     }
 
 
