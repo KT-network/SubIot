@@ -12,13 +12,14 @@
 #include "Core/SubIotConfig.h"
 
 
-SubIotBle subIotBle;
+extern SubIotBle pSubIotBle;
 
 class SubIot{
 private:
     WorkState workState = WORK_STATE_INIT;
     String subIotSystemSerialNum = "";
     uint8_t subIotSystemDebugMode = 1;
+    bool wait = true;
 
 
     bool isFactory();
@@ -29,9 +30,12 @@ public:
 
     bool getDebug();
     WorkState getWorkState();
+    void setWorkState(WorkState state);
+    void setWaitState(bool state);
+    bool getWaitState();
 
 };
 
-SubIot subIot;
+extern SubIot subIot;
 
 #endif //ESP32_TEST_SUBIOT_H
