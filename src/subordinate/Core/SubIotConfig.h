@@ -5,9 +5,16 @@
 #ifndef ESP32_TEST_SUBIOTCONFIG_H
 #define ESP32_TEST_SUBIOTCONFIG_H
 
+#define SUB_IOT_SYSTEM_STATE_LED_PIN 2
+#define SUB_IOT_SYSTEM_FACTORY_BLE_NAME "ESP32_Factory_1"
 
-//#define SUB_IOT_FACTORY_BLE_NAME "ESP32_Factory_1"
 
+//#if !defined(SUB_IOT_SYSTEM_STATE_LED_PIN)
+//#endif
+//
+//#if !defined(SUB_IOT_SYSTEM_FACTORY_BLE_NAME)
+//
+//#endif
 
 
 typedef enum {

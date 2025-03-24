@@ -12,7 +12,7 @@
 #include "Core/SubIotConfig.h"
 
 
-extern SubIotBle pSubIotBle;
+
 
 class SubIot{
 private:
@@ -29,11 +29,12 @@ public:
 
     bool getDebug();
     WorkState getWorkState();
-    Preferences getPreferencesObject();
+//    Preferences getPreferencesObject();
     void setWorkState(WorkState state);
 
 };
 
 extern SubIot subIot;
+extern SubIotBle pSubIotBle;
 
 #endif //ESP32_TEST_SUBIOT_H

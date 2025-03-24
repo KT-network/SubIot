@@ -35,9 +35,24 @@ public:
 
 class SubIotBleCharacteristicCallback : public BLECharacteristicCallbacks {
 
+    uint8_t ssidWriteCount = 0;
+
     virtual void onRead(BLECharacteristic *pCharacteristic);
 
     virtual void onWrite(BLECharacteristic *pCharacteristic);
+
+};
+
+
+class SubIotBleServerCallback : public BLEServerCallbacks{
+
+private:
+    bool connectState = false;
+
+public:
+    virtual void onConnect(BLEServer* pServer);
+    virtual void onDisconnect(BLEServer* pServer);
+
 
 };
 

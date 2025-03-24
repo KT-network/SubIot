@@ -7,24 +7,42 @@
 SubIotBle pSubIotBle;
 SubIot subIot;
 
+void SubIotBleServerCallback::onConnect(BLEServer *pServer) {
+
+
+
+    this->connectState = true;
+
+
+}
+
+
+void SubIotBleServerCallback::onDisconnect(BLEServer *pServer) {
+    this->connectState = false;
+    if (subIot.getWorkState() == WORK_STATE_BLE_CONFIG || subIot.getWorkState() == WORK_STATE_FACTORY_CONFIG){
+        pServer->startAdvertising();
+    }
+
+}
 
 void SubIotBleCharacteristicCallback::onRead(BLECharacteristic *pCharacteristic) {
     if (subIot.getWorkState() != WORK_STATE_BLE_CONFIG)
         return;
     if (pCharacteristic->getUUID().toString() == SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_CONFIG_SSID_UUID) {
-        subIot.getPreferencesObject().begin("config", true);
-        pCharacteristic->setValue(subIot.getPreferencesObject().getString("wifi_ssid","").c_str());
-        subIot.getPreferencesObject().end();
+        Preferences preferences;
+        preferences.begin("config", true);
+        pCharacteristic->setValue(preferences.getString("wifi_ssid","").c_str());
+        preferences.end();
     } else if (pCharacteristic->getUUID().toString() == SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_CONFIG_SSID_PWD_UUID) {
-
-        subIot.getPreferencesObject().begin("config", true);
-        pCharacteristic->setValue(subIot.getPreferencesObject().getString("wifi_pwd","").c_str());
-        subIot.getPreferencesObject().end();
+        Preferences preferences;
+        preferences.begin("config", true);
+        pCharacteristic->setValue(preferences.getString("wifi_pwd","").c_str());
+        preferences.end();
     } else if (pCharacteristic->getUUID().toString() == SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_FACTORY_SERIAL_NUM_UUID) {
-
-        subIot.getPreferencesObject().begin("system", true);
-        pCharacteristic->setValue(subIot.getPreferencesObject().getString("serial","").c_str());
-        subIot.getPreferencesObject().end();
+        Preferences preferences;
+        preferences.begin("system", true);
+        pCharacteristic->setValue(preferences.getString("serial","").c_str());
+        preferences.end();
 
     }
 
@@ -38,18 +56,21 @@ void SubIotBleCharacteristicCallback::onWrite(BLECharacteristic *pCharacteristic
             return;
 
         if (pCharacteristic->getUUID().toString() == SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_FACTORY_SERIAL_NUM_UUID) {
-            subIot.getPreferencesObject().begin("system", false);
-            subIot.getPreferencesObject().putString("serial",pCharacteristic->getValue().c_str());
+            Preferences preferences;
+
+            preferences.begin("system", false);
+            preferences.putString("serial",pCharacteristic->getValue().c_str());
             Serial.println("[Ble] Write Factory Config Done");
-            subIot.getPreferencesObject().end();
+            preferences.end();
 
             pSubIotBle.setTaskWaitState(false);
             subIot.setWorkState(WORK_STATE_BLE_CONFIG);
 
         } else if (pCharacteristic->getUUID().toString() == SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_FACTORY_DEBUG_MODE_UUID) {
-            subIot.getPreferencesObject().begin("system", false);
-            subIot.getPreferencesObject().putUChar("debug",pCharacteristic->getData()[0]);
-            subIot.getPreferencesObject().end();
+            Preferences preferences;
+            preferences.begin("system", false);
+            preferences.putUChar("debug",pCharacteristic->getData()[0]);
+            preferences.end();
         }
 
     } else {
@@ -57,15 +78,24 @@ void SubIotBleCharacteristicCallback::onWrite(BLECharacteristic *pCharacteristic
             return;
 
         if (pCharacteristic->getUUID().toString() == SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_CONFIG_SSID_UUID) {
-
-            subIot.getPreferencesObject().begin("config", false);
-            subIot.getPreferencesObject().putString("wifi_ssid",pCharacteristic->getValue().c_str());
-            subIot.getPreferencesObject().end();
+            Preferences preferences;
+            preferences.begin("config", false);
+            preferences.putString("wifi_ssid",pCharacteristic->getValue().c_str());
+            preferences.end();
+            this->ssidWriteCount =1;
 
         } else if (pCharacteristic->getUUID().toString() == SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_CONFIG_SSID_PWD_UUID) {
-            subIot.getPreferencesObject().begin("config", false);
-            subIot.getPreferencesObject().putString("wifi_pwd",pCharacteristic->getValue().c_str());
-            subIot.getPreferencesObject().end();
+            Preferences preferences;
+            preferences.begin("config", false);
+            preferences.putString("wifi_pwd",pCharacteristic->getValue().c_str());
+            preferences.end();
+            this->ssidWriteCount=2;
+        }
+
+        if (this->ssidWriteCount >= 2){
+            pSubIotBle.setTaskWaitState(false);
+            subIot.setWorkState(WORK_STATE_WIFI_CONNECTED);
+
         }
 
     }
@@ -75,27 +105,18 @@ void SubIotBleCharacteristicCallback::onWrite(BLECharacteristic *pCharacteristic
 
 bool SubIot::isFactory() {
 
-    // this->pNvs.begin("system", false);
-    // this->pNvs.clear();  // 清除存储的所有键值
-    // this->pNvs.end();
+    Preferences preferences;
 
-    if(this->pNvs.begin("system", false)) {
-        Serial.println("[NVS] Done");
-    }
-    this->pNvs.putString("serial1", "ESP32-ABC123");
-    Serial.println("Read from Preferences: " + this->pNvs.getString("serial1", "Fill"));
-    // Serial.println("Read from Preferences: " + this->pNvs.getString("serial", "zzz"));
+    preferences.begin("system", true);
 
-
-
-    this->subIotSystemSerialNum = this->pNvs.getString("serial","");
-    this->subIotSystemDebugMode = this->pNvs.getBool("debug", true);
-
-    this->pNvs.end();
-    Serial.println("[NVS] Read:" + this->pNvs.getString("serial","None"));
-    if (this->subIotSystemSerialNum == "") {
+    this->subIotSystemSerialNum = preferences.getString("serial","");
+    this->subIotSystemDebugMode = preferences.getBool("debug", true);
+    preferences.end();
+    if (this->subIotSystemSerialNum == ""){
         return true;
     }
+    Serial.println("[System] Serial Value:" + this->subIotSystemSerialNum);
+
     return false;
 
 }
@@ -114,12 +135,28 @@ bool SubIot::getDebug() {
     return this->subIotSystemDebugMode;
 }
 
-Preferences SubIot:: getPreferencesObject(){
-    return this->pNvs;
-}
+//Preferences SubIot:: getPreferencesObject(){
+//    return this->pNvs;
+//}
 
 void SubIot::begin() {
+    pinMode(SUB_IOT_SYSTEM_STATE_LED_PIN,OUTPUT);
+    digitalWrite(SUB_IOT_SYSTEM_STATE_LED_PIN,1);
+    Preferences preferences;
+    preferences.begin("config", true);
+    Serial.println("ssid:"+preferences.getString("wifi_ssid","123")) ;
+    Serial.println("pwd:"+preferences.getString("wifi_pwd","456"));
+    preferences.end();
 
+//    Preferences preferences;
+//    preferences.begin("system", false);
+//    preferences.remove("serial");
+//    preferences.end();
+//
+//    preferences.begin("config", false);
+//    preferences.remove("wifi_ssid");
+//    preferences.remove("wifi_pwd");
+//    preferences.end();
 
 }
 
@@ -130,10 +167,22 @@ void SubIot::run() {
         case WORK_STATE_INIT:
             // 判断是否为出厂模式
             if (this->isFactory()) {
-                if (this->getDebug()) {
-                    Serial.println("[System] Factory mode");
-                }
+                Serial.println("[System] Factory mode");
                 this->workState = WORK_STATE_FACTORY_CONFIG;
+            } else{
+                Serial.println("[System] User mode");
+                Preferences preferences;
+                preferences.begin("config", true);
+                if (preferences.getString("wifi_ssid","") == "" || preferences.getString("wifi_pwd","") == "")
+                {
+                    Serial.println("[System] Wifi No Config");
+                    this->workState = WORK_STATE_BLE_CONFIG;
+                } else{
+                    Serial.println("[System] Prepare wifi Connection");
+                    this->workState = WORK_STATE_WIFI_CONNECTED;
+                }
+                preferences.end();
+
             }
 
             break;
@@ -144,6 +193,7 @@ void SubIot::run() {
             pSubIotBle.begin(this->workState);
             break;
         case WORK_STATE_WIFI_CONNECTED:
+//            Serial.println("[WIFI] WIFI Connect...");
             break;
         case WORK_STATE_MQTT_CONNECTED:
             break;

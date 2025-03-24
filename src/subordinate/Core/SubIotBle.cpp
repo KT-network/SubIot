@@ -14,16 +14,12 @@ void SubIotBle::setTaskWaitState(bool state) {
 
 void SubIotBle::begin(WorkState state) {
 
-#if defined(SUB_IOT_FACTORY_BLE_NAME)
 
-    this.bleNameString = SUB_IOT_FACTORY_BLE_NAME;
-#else
-    this->bleNameString = "ESP32_Factory_1";
-#endif
 
     if (state == WORK_STATE_FACTORY_CONFIG) {
 
-        BLEDevice::init(this->bleNameString.c_str());
+//        BLEDevice::init(this->bleNameString.c_str());
+        BLEDevice::init(SUB_IOT_SYSTEM_FACTORY_BLE_NAME);
         BLEServer *pBleServer = BLEDevice::createServer();
         BLEService *pBleService = pBleServer->createService(SUB_IOT_BLE_SERVICE_SYSTEM_FACTORY_UUID);
         BLECharacteristic *pBleCharacteristicSerial = pBleService->createCharacteristic(
@@ -31,6 +27,8 @@ void SubIotBle::begin(WorkState state) {
                 BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
 
         pBleCharacteristicSerial->setCallbacks(new SubIotBleCharacteristicCallback());
+        pBleServer->setCallbacks(new SubIotBleServerCallback());
+
 
         pBleService->start();
         BLEDevice::startAdvertising();
@@ -40,6 +38,13 @@ void SubIotBle::begin(WorkState state) {
     } else if (state == WORK_STATE_BLE_CONFIG) {
         BLEDevice::init(this->bleNameString.c_str());
         BLEServer *pBleServer = BLEDevice::createServer();
+
+        BLEService *pBleServiceSystem = pBleServer->createService(SUB_IOT_BLE_SERVICE_SYSTEM_FACTORY_UUID);
+        BLECharacteristic *pBleCharacteristicSerial = pBleServiceSystem->createCharacteristic(
+                SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_FACTORY_SERIAL_NUM_UUID,
+                BLECharacteristic::PROPERTY_READ);
+
+
         BLEService *pBleService = pBleServer->createService(SUB_IOT_BLE_SERVICE_SYSTEM_CONFIGS_UUID);
         BLECharacteristic *pBleCharacteristicSsid = pBleService->createCharacteristic(
                 SUB_IOT_BLE_CHARACTERISTIC_SYSTEM_CONFIG_SSID_UUID,
@@ -51,8 +56,11 @@ void SubIotBle::begin(WorkState state) {
 
         pBleCharacteristicSsid->setCallbacks(new SubIotBleCharacteristicCallback());
         pBleCharacteristicSsidPwd->setCallbacks(new SubIotBleCharacteristicCallback());
+        pBleCharacteristicSerial->setCallbacks(new SubIotBleCharacteristicCallback());
 
+        pBleServer->setCallbacks(new SubIotBleServerCallback());
 
+        pBleServiceSystem->start();
         pBleService->start();
         BLEDevice::startAdvertising();
         Serial.println("[Ble] Start Config Wifi");
@@ -64,9 +72,16 @@ void SubIotBle::begin(WorkState state) {
     }
 
     while (this->taskWait) {
+        if (state == WORK_STATE_FACTORY_CONFIG){
+            digitalWrite(SUB_IOT_SYSTEM_STATE_LED_PIN, digitalRead(SUB_IOT_SYSTEM_STATE_LED_PIN) == 0 ? 1 : 0);
+            delay(800);
+        }else if (state == WORK_STATE_BLE_CONFIG){
+            digitalWrite(SUB_IOT_SYSTEM_STATE_LED_PIN, digitalRead(SUB_IOT_SYSTEM_STATE_LED_PIN) == 0 ? 1 : 0);
+            delay(1300);
+        } else{
+            delay(1000);
+        }
 
-
-        delay(1000);
     }
 
 
